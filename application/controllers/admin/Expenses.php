@@ -129,8 +129,8 @@ class Expenses extends AdminController
             if (staff_cant('edit', 'expenses')) {
                 set_alert('danger', _l('access_denied'));
                 echo json_encode([
-                        'url' => admin_url('expenses/expense/' . $id),
-                    ]);
+                    'url' => admin_url('expenses/expense/' . $id),
+                ]);
                 die;
             }
             $success = $this->expenses_model->update($this->input->post(), $id);
@@ -138,9 +138,9 @@ class Expenses extends AdminController
                 set_alert('success', _l('updated_successfully', _l('expense')));
             }
             echo json_encode([
-                    'url'       => admin_url('expenses/list_expenses/' . $id),
-                    'expenseid' => $id,
-                ]);
+                'url'       => admin_url('expenses/list_expenses/' . $id),
+                'expenseid' => $id,
+            ]);
             die;
         }
         if ($id == '') {
@@ -272,7 +272,7 @@ class Expenses extends AdminController
             if (count($data['expenses_years']) >= 1 && $data['expenses_years'][0]['year'] != date('Y')) {
                 array_unshift($data['expenses_years'], ['year' => date('Y')]);
             }
-            
+
             $data['expenses_years'] = Arr::uniqueByKey($data['expenses_years'], 'year');
 
             $data['_currency'] = $data['totals']['currencyid'];
@@ -482,5 +482,12 @@ class Expenses extends AdminController
         } else {
             access_denied('expenses');
         }
+    }
+
+    public function get_invoice_items($project_id)
+    {
+        $data = $this->expenses_model->get_invoice_items_data($project_id);
+
+        echo json_encode($data);
     }
 }

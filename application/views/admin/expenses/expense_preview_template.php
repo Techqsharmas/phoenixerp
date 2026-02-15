@@ -59,7 +59,13 @@
             <div class="row mtop20">
                 <div class="col-md-6" id="expenseHeadings">
                     <h3 class="tw-font-semibold tw-text-lg tw-text-neutral-700 tw-mt-0 tw-mb-1" id="expenseCategory">
-                        <?php echo e($expense->category_name); ?>
+                        <?php
+                        if($expense->category_name != ''){
+                            echo e($expense->category_name);
+                        }elseif ($expense->item_list != '') {
+                            echo get_item_name_by_id_for_expenses($expense->item_list);
+                        }
+                         ?>
                     </h3>
                     <?php if (!empty($expense->expense_name)) { ?>
                     <h4 class="tw-text-sm tw-m-0 tw-text-neutral-500" id="expenseName">

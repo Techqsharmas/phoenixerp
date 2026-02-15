@@ -1050,3 +1050,16 @@ function get_staff_department_name($department)
     } 
     return '';
 }
+
+function get_item_name_by_id_for_expenses($item_id) {
+    $CI = &get_instance();
+    $CI->db->select('description');
+    $CI->db->from('tblitemable');
+    $CI->db->where('id', $item_id);
+    $query = $CI->db->get();
+    $result = $query->row();
+    if(!empty($result)) {
+        return $result->description;
+    }
+    return '';
+}

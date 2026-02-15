@@ -25,7 +25,7 @@ return App_table::find('expenses')
 
         $join = [
             'LEFT JOIN ' . db_prefix() . 'clients ON ' . db_prefix() . 'clients.userid = ' . db_prefix() . 'expenses.clientid',
-            'JOIN ' . db_prefix() . 'expenses_categories ON ' . db_prefix() . 'expenses_categories.id = ' . db_prefix() . 'expenses.category',
+            'LEFT JOIN ' . db_prefix() . 'expenses_categories ON ' . db_prefix() . 'expenses_categories.id = ' . db_prefix() . 'expenses.category',
             'LEFT JOIN ' . db_prefix() . 'projects ON ' . db_prefix() . 'projects.id = ' . db_prefix() . 'expenses.project_id',
             'LEFT JOIN ' . db_prefix() . 'files ON ' . db_prefix() . 'files.rel_id = ' . db_prefix() . 'expenses.id AND rel_type="expense"',
             'LEFT JOIN ' . db_prefix() . 'currencies ON ' . db_prefix() . 'currencies.id = ' . db_prefix() . 'expenses.currency',
@@ -72,6 +72,7 @@ return App_table::find('expenses')
             'tax2',
             'project_id',
             'recurring',
+            db_prefix() . 'expenses.item_list as item_list',
         ]);
         $output  = $result['output'];
         $rResult = $result['rResult'];
@@ -87,10 +88,21 @@ return App_table::find('expenses')
 
             $categoryOutput = '';
 
+            // Determine which value to use for the link text
+            $linkText = !empty($aRow['category_name']) ? $aRow['category_name'] : (!empty($aRow['item_list']) ? get_item_name_by_id_for_expenses($aRow['item_list']) : '');
+
+            // Check if the text is from item_list and contains more than 3 words, then truncate to first 3 words
+            if (!empty($aRow['item_list']) && !empty($aRow['category_name']) == false) {
+                $words = explode(' ', $linkText);
+                if (count($words) > 3) {
+                    $linkText = implode(' ', array_slice($words, 0, 3)) . '...';
+                }
+            }
+
             if (is_numeric($clientid)) {
-                $categoryOutput = '<a href="' . admin_url('expenses/list_expenses/' . $aRow['id']) . '">' . e($aRow['category_name']) . '</a>';
+                $categoryOutput = '<a href="' . admin_url('expenses/list_expenses/' . $aRow['id']) . '">' . e($linkText) . '</a>';
             } else {
-                $categoryOutput = '<a href="' . admin_url('expenses/list_expenses/' . $aRow['id']) . '" onclick="init_expense(' . $aRow['id'] . ');return false;">' . e($aRow['category_name']) . '</a>';
+                $categoryOutput = '<a href="' . admin_url('expenses/list_expenses/' . $aRow['id']) . '" onclick="init_expense(' . $aRow['id'] . ');return false;">' . e($linkText) . '</a>';
             }
 
             if ($aRow['billable'] == 1) {
@@ -201,7 +213,7 @@ return App_table::find('expenses')
                 }
             })
             ->options(function ($ci) {
-                return collect($ci->expenses_model->get_expenses_years())->map(fn ($data) => [
+                return collect($ci->expenses_model->get_expenses_years())->map(fn($data) => [
                     'value' => $data['year'],
                     'label' => $data['year'],
                 ])->all();
@@ -210,7 +222,7 @@ return App_table::find('expenses')
         App_table_filter::new('category', 'MultiSelectRule')
             ->label(_l('expense_report_category'))
             ->options(function ($ci) {
-                return collect($ci->expenses_model->get_category())->map(fn ($category) => [
+                return collect($ci->expenses_model->get_category())->map(fn($category) => [
                     'value' => $category['id'],
                     'label' => $category['name'],
                 ])->all();
@@ -223,7 +235,7 @@ return App_table::find('expenses')
         App_table_filter::new('paymentmode', 'SelectRule')->label(_l('payment_mode'))->options(function ($ci) {
             return collect($ci->payment_modes_model->get('', [
                 'invoices_only !=' => 1,
-            ], true))->map(fn ($mode) => [
+            ], true))->map(fn($mode) => [
                 'value' => $mode['id'],
                 'label' => $mode['name'],
             ])->all();

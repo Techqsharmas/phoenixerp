@@ -32,12 +32,12 @@ class Expenses_model extends App_Model
         $this->db->join(db_prefix() . 'payment_modes', '' . db_prefix() . 'payment_modes.id = ' . db_prefix() . 'expenses.paymentmode', 'left');
         $this->db->join(db_prefix() . 'taxes', '' . db_prefix() . 'taxes.id = ' . db_prefix() . 'expenses.tax', 'left');
         $this->db->join('' . db_prefix() . 'taxes as ' . db_prefix() . 'taxes_2', '' . db_prefix() . 'taxes_2.id = ' . db_prefix() . 'expenses.tax2', 'left');
-        $this->db->join(db_prefix() . 'expenses_categories', '' . db_prefix() . 'expenses_categories.id = ' . db_prefix() . 'expenses.category');
+        $this->db->join(db_prefix() . 'expenses_categories', '' . db_prefix() . 'expenses_categories.id = ' . db_prefix() . 'expenses.category', 'left');
         if ($group_by == 'project_id') {
             $this->db->join(db_prefix() . 'projects', '' . db_prefix() . 'projects.id = ' . db_prefix() . 'expenses.project_id', 'left');
         }
         $this->db->where($where);
-        if($group_by) {
+        if ($group_by) {
             $this->db->group_by($group_by);
         }
 
@@ -161,6 +161,13 @@ class Expenses_model extends App_Model
                 $expense                  = $this->get($insert_id);
                 $activity_additional_data = $expense->name;
                 $this->projects_model->log_activity($data['project_id'], 'project_activity_recorded_expense', $activity_additional_data, $visible_activity);
+            }
+            if (isset($data['item_list']) && $data['item_list'] != '') {
+                $data_dt = [
+                    'expenses' => $data['amount'],
+                ];
+                $this->db->where('id', $data['item_list']);
+                $this->db->update(db_prefix() . 'itemable', $data_dt);
             }
 
             hooks()->do_action('after_expense_added', $insert_id);
@@ -416,6 +423,13 @@ class Expenses_model extends App_Model
 
         if ($this->db->affected_rows() > 0) {
             $updated = true;
+            if (isset($data['item_list']) && $data['item_list'] != '') {
+                $data_dt = [
+                    'expenses' => $data['amount'],
+                ];
+                $this->db->where('id', $data['item_list']);
+                $this->db->update(db_prefix() . 'itemable', $data_dt);
+            }
         }
 
         do_action_deprecated('after_expense_updated', [$id], '2.9.4', 'expense_updated');
@@ -800,5 +814,36 @@ class Expenses_model extends App_Model
     public function get_expenses_years()
     {
         return $this->db->query('SELECT DISTINCT(YEAR(date)) as year FROM ' . db_prefix() . 'expenses ORDER by year DESC')->result_array();
+    }
+
+    public function get_invoice_items_data($project_id)
+    {
+        // Initialize the result array
+        $items_data = [];
+
+        // Get the invoice record for this project
+        $this->db->where('project_id', $project_id);
+        $invoice = $this->db->get('tblinvoices')->row();
+
+        // If no invoice found for this project, return empty array
+        if (!$invoice) {
+            return $items_data;
+        }
+
+        // Get records from tblitemable where rel_id = invoice id and rel_type = 'invoice'
+        $this->db->select('id, description');
+        $this->db->where('rel_id', $invoice->id);
+        $this->db->where('rel_type', 'invoice');
+        $items = $this->db->get('tblitemable')->result();
+
+        // Process each item and add to the result array
+        foreach ($items as $item) {
+            $items_data[] = [
+                'id' => $item->id,
+                'description' => $item->description
+            ];
+        }
+
+        return $items_data;
     }
 }
