@@ -672,6 +672,11 @@
         if (project_id != '') {
             load_custom_field_with_selected(project_id, selected_item);
         }
+
+        $('#project_id').on('change', function() {
+            var project_id = $(this).val();
+            load_custom_field_with_selected(project_id, selected_item);
+        });
     });
 
     function load_custom_field_with_selected(project_id, selected_value) {
